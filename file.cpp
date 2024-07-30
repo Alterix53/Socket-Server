@@ -42,9 +42,7 @@ void readInputFile(string fileName, vector<fileZip>& file) {
 	while (getline(ifs, s)) {
 		if (!s.empty()) {
 			fileZip temp = getFileInfo(s);
-			if (find_if(file.begin(), file.end(), [&temp](const fileZip& f) { return f.name == temp.name; }) == file.end()) {
-				file.push_back(temp);
-			}
+			file.push_back(temp);
 		}
 	}
 
@@ -53,7 +51,7 @@ void readInputFile(string fileName, vector<fileZip>& file) {
 
 bool sendFile(CSocket& server, string fileName) {
 	ifstream ifs(fileName, ios::in | ios::binary);
-	if (!ifs) {
+	if (!ifs.is_open()) {
 		cerr << "Error occur while transfer the file!";
 		return false;
 	}
@@ -61,35 +59,36 @@ bool sendFile(CSocket& server, string fileName) {
 	ifs.seekg(0, ios::end);
 	long long allSize = ifs.tellg();
 	server.Send(&allSize, sizeof(allSize), 0);
+	// int retryCount = 10;
 
 	// initialize variable
 	vector<char> file(max_chunk);
-	bool isSending = true;
-	bool flag;
+	bool isFinished = false;
+	 // bool isSendingCorrectly;
 
 	// start sending the file
 	ifs.seekg(0, ios::beg);
 	while (!ifs.eof())
 	{
 		// get the chunk size and send to client
-		int chunk_size = min(allSize - ifs.tellg(), max_chunk);
-		server.Send(&chunk_size, sizeof(chunk_size), 0);
+		int Buffer = min(allSize - ifs.tellg(), max_chunk);
+		// server.Send(&Buffer, sizeof(Buffer), 0);
 
 		// read and send the data, receive the signal 
 		// the signal show if the data is correctly transfer
-		ifs.read(file.data(), chunk_size);
-		server.Send(file.data(), chunk_size, 0);
-		server.Receive(&flag, sizeof(flag), 0);
+		ifs.read(file.data(), Buffer);
+		server.Send(file.data(), Buffer, 0);
+		// server.Receive(&isSendingCorrectly, sizeof(isSendingCorrectly), 0);
 
 		// if finish transfering the file
 		if (allSize == ifs.tellg())
 		{
-			isSending = false;
-			server.Send(&isSending, sizeof(isSending), 0);
+			isFinished = true;
+			//server.Send(&isFinished, sizeof(isFinished), 0);
 			break;
 		}
 
-		server.Send(&isSending, sizeof(isSending), 0);
+		//server.Send(&isFinished, sizeof(isFinished), 0);
 	}
 
 	ifs.close();
